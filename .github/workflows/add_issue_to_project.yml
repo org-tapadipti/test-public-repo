@@ -19,7 +19,7 @@ jobs:
               organization(login: $org){
                 projectNext(number: $number) {
                   id
-                  fields(first:20) {
+                  fields(first:30) {
                     nodes {
                       id
                       name
@@ -31,6 +31,8 @@ jobs:
             }' -f org=$ORGANIZATION -F number=$PROJECT_NUMBER > project_data.json
 
           echo 'PROJECT_ID='$(jq '.data.organization.projectNext.id' project_data.json) >> $GITHUB_ENV
+          echo 'SENTRY_ISSUE_FIELD_ID='$(jq '.data.organization.projectNext.fields.nodes[] | select(.name== "Sentry issue") | .id' project_data.json) >> $GITHUB_ENV
+          echo 'SENTRY_ISSUE_OPTION_ID='$(jq '.data.organization.projectNext.fields.nodes[] | select(.name== "Sentry issue") |.settings | fromjson.options[] | select(.name=="Yes") |.id' project_data.json) >> $GITHUB_ENV
 
       - name: Add issue to project
         env:
@@ -47,3 +49,27 @@ jobs:
             }' -f project=$PROJECT_ID -f iss=$ISSUE_ID --jq '.data.addProjectNextItem.projectNextItem.id')"
           
           echo 'ITEM_ID='$item_id >> $GITHUB_ENV
+
+      - name: Set fields
+        env:
+          GITHUB_TOKEN: ${{ secrets.STUDIO_ROADMAP_PROJECT_GITHUB_TOKEN }}
+        run: |
+          gh api graphql -f query='
+            mutation (
+              $project: ID!
+              $item: ID!
+              $sentry_issue_field: ID!
+              $sentry_issue_value: String!
+            ) {
+              set_sentry_issue: updateProjectNextItemField(input: {
+                projectId: $project
+                itemId: $item
+                fieldId: $sentry_issue_field
+                value: $sentry_issue_value
+              }) {
+                projectNextItem {
+                  id
+                  }
+              }
+            }' -f project=$PROJECT_ID -f item=$ITEM_ID -f sentry_issue_field=$SENTRY_ISSUE_FIELD_ID -f sentry_issue_value=${{ env.SENTRY_ISSUE_OPTION_ID }} --silent 
+          echo 'ITEM_ID='$item_id >> $GITHUB_ENV 
