@@ -2,7 +2,7 @@ name: Add new issue to project
 on:
   issues:
     types:
-      - opened
+      - [opened, edited]
 jobs:
   add_sentry_issue_to_project:
     if: ${{ github.event.issue.user.login == 'tapadipti'}}
