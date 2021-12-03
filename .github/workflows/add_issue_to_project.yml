@@ -37,4 +37,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.MY_PAT }}
           ISSUE_ID: ${{ github.event.issue.node_id }}
         run: |
-          gh issue view ${{ github.event.issue.id }}
+          gh issue view 1
